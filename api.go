@@ -11,39 +11,21 @@ import (
 
 type APIServer struct {
 	listenAddr string
+	store      Storage
 }
 
-func NewApiServer(listenAddr string) *APIServer {
+func NewApiServer(listenAddr string, store Storage) *APIServer {
 	return &APIServer{
 		listenAddr: listenAddr,
+		store:      store,
 	}
-}
-
-func WriteJSON(w http.ResponseWriter, status int, v any) error {
-	w.WriteHeader(status)
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	return json.NewEncoder(w).Encode(v)
-}
-
-// decrorator for httphandlerFunc
-type apiFunc func(http.ResponseWriter, *http.Request) error
-
-type ApiError struct {
-	Error string
-}
-
-func makeHttpHandleFunc(f apiFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if err := f(w, r); err != nil {
-			WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
-		}
-	}
-
 }
 
 func (s *APIServer) Run() {
 	router := mux.NewRouter()
 	router.HandleFunc("/account", makeHttpHandleFunc(s.handleAccount))
+
+	router.HandleFunc("/account/{id}", makeHttpHandleFunc(s.handleGetAccount))
 
 	log.Println("Json api server running on port:", s.listenAddr)
 	http.ListenAndServe(s.listenAddr, router)
@@ -64,9 +46,11 @@ func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
-	account := NewAccount("Jack", "Smith")
+	vars := mux.Vars(r)["id"]
+	fmt.Println(vars)
+	// account := NewAccount("Jack", "Smith")
 
-	return WriteJSON(w, http.StatusOK, account)
+	return WriteJSON(w, http.StatusOK, &Account{})
 }
 
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
@@ -79,4 +63,29 @@ func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) 
 
 func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error {
 	return nil
+}
+
+// helper functions
+
+func WriteJSON(w http.ResponseWriter, status int, v any) error {
+
+	w.Header().Add("Content-Type", "application/json") // need to add instead of set
+	w.WriteHeader(status)
+	return json.NewEncoder(w).Encode(v)
+}
+
+// decrorator for httphandlerFunc
+type apiFunc func(http.ResponseWriter, *http.Request) error
+
+type ApiError struct {
+	Error string
+}
+
+func makeHttpHandleFunc(f apiFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := f(w, r); err != nil {
+			WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+		}
+	}
+
 }
