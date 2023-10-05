@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package account_proto;
+
+option go_package = "github.com/shuai1900/gRPC_microservice";
+
+service AccountManagement {
+    rpc CreateAccount (NewAccount) returns (Account) {}
+}
+
+message NewAccount {
+    string firstName = 1;
+    string lastName =2;
+}
+
+message Account {
+    int32 id=1;
+    string firstName = 2;
+    string lastName =3;
+    int64 number=4;
+    int64 balance=5;
+    google.protobuf.Timestamp createdAt = 6;
+}
