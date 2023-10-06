@@ -2,14 +2,16 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math/rand"
 	"net"
 	"os"
+	"time"
 
+	"github.com/jackc/pgx/v4"
 	pb "github.com/shuai1900/gRPC_microservice/account_proto"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -19,15 +21,29 @@ const (
 
 type AccountServer struct {
 	pb.UnimplementedAccountManagementServer
+	conn *pgx.Conn
 	// account_list *pb.AccountList
 }
 
 func (s *AccountServer) CreateAccount(ctx context.Context, in *pb.NewAccount) (*pb.Account, error) {
 	log.Printf("received:%v", in.GetFirstName())
 
-	readBytes, err := os.ReadFile("accounts.json")
+	createSQL := `
+		create table if not exists account (
+			id serial primary key,
+			first_name varchar(50),
+			last_name varchar(50),
+			number serial,
+			balance serial,
+			created_at timestamp
+		)
+	`
 
-	var account_list *pb.AccountList = &pb.AccountList{}
+	_, err := s.conn.Exec(context.Background(), createSQL)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "table creation failed: %v\n", err)
+		os.Exit(1)
+	}
 
 	var account_id int32 = int32(rand.Intn(10000))
 	created_account := &pb.Account{
@@ -38,36 +54,39 @@ func (s *AccountServer) CreateAccount(ctx context.Context, in *pb.NewAccount) (*
 		Balance:   0,
 		CreatedAt: timestamppb.Now(),
 	}
+
+	//convert the timestamppb.Now() to time.Time
+
+	// start a transaction
+	tx, err := s.conn.Begin(context.Background())
 	if err != nil {
-		if os.IsNotExist(err) {
-			log.Println("file not found, creating a new json file")
-			account_list.Accounts = append(account_list.Accounts, created_account)
-			jsonBytes, err := protojson.Marshal(account_list)
-			if err != nil {
-				log.Fatalf("json marshaling failed: %v", err)
-			}
-			if err := os.WriteFile("accounts.json", jsonBytes, 0644); err != nil {
-				log.Fatalf("failed write to file: %v", err)
-			}
-			return created_account, nil
-		} else {
-			log.Fatalf("error reading file:%v", err)
-		}
+		log.Fatalf("conn.Begin failed:%v", err)
 	}
-	if err := protojson.Unmarshal(readBytes, account_list); err != nil {
-		log.Fatalf("failed to parse user list: %v", err)
-	}
-	account_list.Accounts = append(account_list.Accounts, created_account)
-	jsonBytes, err := protojson.Marshal(account_list)
+	insert := `
+		insert into account (
+			first_name, last_name, number, balance, created_at
+		) values (
+			$1,$2,$3,$4,$5
+		)
+	`
+	_, err = tx.Exec(context.Background(), insert, created_account.FirstName, created_account.LastName, created_account.Number, created_account.Balance, TimestampProtoToTime(created_account.CreatedAt))
 	if err != nil {
-		log.Fatalf("json marshaling failed: %v", err)
+		log.Fatalf("tx.exec failed: %v", err)
 	}
-	if err := os.WriteFile("accounts.json", jsonBytes, 0644); err != nil {
-		log.Fatalf("failed write to file: %v", err)
-	}
+	tx.Commit(context.Background())
+
 	return created_account, nil
 
 }
+
+// convert timestamppb to time
+func TimestampProtoToTime(ts *timestamppb.Timestamp) time.Time {
+	return ts.AsTime()
+}
+
+// func TimeToTimestampProto(t time.Time) *timestamppb.Timestamp {
+// 	return timestamppb.New(t)
+// }
 
 func NewAccountServer() *AccountServer {
 	return &AccountServer{}
@@ -87,16 +106,26 @@ func (server *AccountServer) Run() error {
 }
 
 func (s *AccountServer) GetAccount(ctx context.Context, in *pb.GetAccountParams) (*pb.AccountList, error) {
-	jsonBytes, err := os.ReadFile("accounts.json")
-	if err != nil {
-		log.Fatalf("failed read from file: %v", err)
-	}
+	query := `
+		select * from account
+	`
 	var account_list *pb.AccountList = &pb.AccountList{}
-
-	if err := protojson.Unmarshal(jsonBytes, account_list); err != nil {
-		log.Fatalf("failed to ummarshal: %v", err)
-
+	rows, err := s.conn.Query(context.Background(), query)
+	if err != nil {
+		return nil, err
 	}
+	defer rows.Close()
+	for rows.Next() {
+		account := pb.Account{}
+		var createdAt time.Time // to convert timestamppb.now into time.time
+		err = rows.Scan(&account.Id, &account.FirstName, &account.LastName, &account.Number, &account.Balance, &createdAt)
+		if err != nil {
+			return nil, err
+		}
+		account.CreatedAt = timestamppb.New(createdAt) // rewrite the account.CreatedAt with the converted time
+		account_list.Accounts = append(account_list.Accounts, &account)
+	}
+
 	return account_list, nil
 
 }

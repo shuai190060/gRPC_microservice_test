@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"time"
 
+	"github.com/jackc/pgx/v4"
 	pb "github.com/shuai1900/gRPC_microservice/account_proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -54,7 +56,24 @@ func startRESTApiService(store *PostgresStore) {
 }
 
 func startGRPCServerService() {
+
+	// Fetch environment variables
+	user := os.Getenv("DB_USER")
+	dbname := os.Getenv("DB_NAME")
+	host := os.Getenv("DB_HOST")
+	sslmode := os.Getenv("DB_SSLMODE")
+
+	database_url := fmt.Sprintf("postgresql://%s:@%s:5432/%s?sslmode=%s", user, host, dbname, sslmode)
+
+	conn, err := pgx.Connect(context.Background(), database_url)
+	if err != nil {
+		log.Fatalf("unable to establish connection:%v", err)
+
+	}
+	defer conn.Close(context.Background())
+
 	var account_server *AccountServer = NewAccountServer()
+	account_server.conn = conn
 	if err := account_server.Run(); err != nil {
 		log.Fatalf("failed to server:%v", err)
 	}
