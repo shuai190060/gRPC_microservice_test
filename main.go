@@ -14,10 +14,6 @@ func init() {
 	rand.New(rand.NewSource(1000000))
 }
 
-const (
-	address = "localhost:50051"
-)
-
 func main() {
 
 	store, err := NewPostgreStore()
