@@ -19,6 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AccountManagementClient interface {
 	CreateAccount(ctx context.Context, in *NewAccount, opts ...grpc.CallOption) (*Account, error)
+	GetAccount(ctx context.Context, in *GetAccountParams, opts ...grpc.CallOption) (*AccountList, error)
 }
 
 type accountManagementClient struct {
@@ -38,11 +39,21 @@ func (c *accountManagementClient) CreateAccount(ctx context.Context, in *NewAcco
 	return out, nil
 }
 
+func (c *accountManagementClient) GetAccount(ctx context.Context, in *GetAccountParams, opts ...grpc.CallOption) (*AccountList, error) {
+	out := new(AccountList)
+	err := c.cc.Invoke(ctx, "/account_proto.AccountManagement/GetAccount", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AccountManagementServer is the server API for AccountManagement service.
 // All implementations must embed UnimplementedAccountManagementServer
 // for forward compatibility
 type AccountManagementServer interface {
 	CreateAccount(context.Context, *NewAccount) (*Account, error)
+	GetAccount(context.Context, *GetAccountParams) (*AccountList, error)
 	mustEmbedUnimplementedAccountManagementServer()
 }
 
@@ -52,6 +63,9 @@ type UnimplementedAccountManagementServer struct {
 
 func (UnimplementedAccountManagementServer) CreateAccount(context.Context, *NewAccount) (*Account, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateAccount not implemented")
+}
+func (UnimplementedAccountManagementServer) GetAccount(context.Context, *GetAccountParams) (*AccountList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAccount not implemented")
 }
 func (UnimplementedAccountManagementServer) mustEmbedUnimplementedAccountManagementServer() {}
 
@@ -84,6 +98,24 @@ func _AccountManagement_CreateAccount_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AccountManagement_GetAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAccountParams)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountManagementServer).GetAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/account_proto.AccountManagement/GetAccount",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountManagementServer).GetAccount(ctx, req.(*GetAccountParams))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AccountManagement_ServiceDesc is the grpc.ServiceDesc for AccountManagement service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -94,6 +126,10 @@ var AccountManagement_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateAccount",
 			Handler:    _AccountManagement_CreateAccount_Handler,
+		},
+		{
+			MethodName: "GetAccount",
+			Handler:    _AccountManagement_GetAccount_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

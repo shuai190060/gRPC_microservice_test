@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math/rand"
-	"net"
 	"time"
 
 	pb "github.com/shuai1900/gRPC_microservice/account_proto"
@@ -41,7 +41,7 @@ func main() {
 	// server service
 	go startGRPCServerService()
 
-	// client service to write to postgresql
+	// // client service to write to postgresql
 	time.Sleep(1 * time.Second)
 	startGRPCClientService()
 	select {}
@@ -54,15 +54,8 @@ func startRESTApiService(store *PostgresStore) {
 }
 
 func startGRPCServerService() {
-	lis, err := net.Listen("tcp", port)
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-	//init new grpc server
-	s := grpc.NewServer()
-	pb.RegisterAccountManagementServer(s, &AccountServer{})
-	log.Printf("server listening at %v", lis.Addr())
-	if err := s.Serve(lis); err != nil {
+	var account_server *AccountServer = NewAccountServer()
+	if err := account_server.Run(); err != nil {
 		log.Fatalf("failed to server:%v", err)
 	}
 }
@@ -93,5 +86,13 @@ func startGRPCClientService() {
 	Last_name: %s
 	Number: %d
 	`, r.GetFirstName(), r.GetLastName(), r.GetNumber())
+
+	params := &pb.GetAccountParams{}
+	res_acc_list, err := c.GetAccount(ctx, params)
+	if err != nil {
+		log.Fatalf("could not retrieve accounts: %v", err)
+	}
+	log.Print("\nuser list is:\n")
+	fmt.Printf("r.GetAccount():%v", res_acc_list)
 
 }

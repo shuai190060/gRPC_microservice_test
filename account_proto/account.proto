@@ -8,6 +8,7 @@ option go_package = "github.com/shuai1900/gRPC_microservice";
 
 service AccountManagement {
     rpc CreateAccount (NewAccount) returns (Account) {}
+    rpc GetAccount (GetAccountParams) returns (AccountList) {}
 }
 
 message NewAccount {
@@ -22,4 +23,10 @@ message Account {
     int64 number=4;
     int64 balance=5;
     google.protobuf.Timestamp createdAt = 6;
+}
+
+message GetAccountParams {}
+
+message AccountList {
+    repeated Account accounts=1;
 }
