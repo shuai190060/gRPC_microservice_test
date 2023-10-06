@@ -6,12 +6,8 @@ import (
 	"log"
 	"math/rand"
 	"os"
-	"time"
 
 	"github.com/jackc/pgx/v4"
-	pb "github.com/shuai1900/gRPC_microservice/account_proto"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func init() {
@@ -41,12 +37,12 @@ func main() {
 	//----------------------------------------------------------------------------------
 
 	// server service
-	go startGRPCServerService()
+	startGRPCServerService()
 
-	// // client service to write to postgresql
-	time.Sleep(1 * time.Second)
-	startGRPCClientService()
-	select {}
+	// // // client service to write to postgresql
+	// time.Sleep(1 * time.Second)
+	// startGRPCClientService()
+	// select {}
 
 }
 
@@ -79,39 +75,39 @@ func startGRPCServerService() {
 	}
 }
 
-func startGRPCClientService() {
-	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
-	}
-	defer conn.Close()
+// func startGRPCClientService() {
+// 	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+// 	if err != nil {
+// 		log.Fatalf("did not connect: %v", err)
+// 	}
+// 	defer conn.Close()
 
-	// create new client with this connection
-	c := pb.NewAccountManagementClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+// 	// create new client with this connection
+// 	c := pb.NewAccountManagementClient(conn)
+// 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+// 	defer cancel()
 
-	first_name := "bob"
-	last_name := "jack"
-	r, err := c.CreateAccount(ctx, &pb.NewAccount{
-		FirstName: first_name,
-		LastName:  last_name,
-	})
-	if err != nil {
-		log.Fatalf("could not create new account:%v", err)
-	}
-	log.Printf(`Account details:
-	First_name: %s
-	Last_name: %s
-	Number: %d
-	`, r.GetFirstName(), r.GetLastName(), r.GetNumber())
+// 	first_name := "bob"
+// 	last_name := "jack"
+// 	r, err := c.CreateAccount(ctx, &pb.NewAccount{
+// 		FirstName: first_name,
+// 		LastName:  last_name,
+// 	})
+// 	if err != nil {
+// 		log.Fatalf("could not create new account:%v", err)
+// 	}
+// 	log.Printf(`Account details:
+// 	First_name: %s
+// 	Last_name: %s
+// 	Number: %d
+// 	`, r.GetFirstName(), r.GetLastName(), r.GetNumber())
 
-	params := &pb.GetAccountParams{}
-	res_acc_list, err := c.GetAccount(ctx, params)
-	if err != nil {
-		log.Fatalf("could not retrieve accounts: %v", err)
-	}
-	log.Print("\nuser list is:\n")
-	fmt.Printf("r.GetAccount():%v", res_acc_list)
+// 	params := &pb.GetAccountParams{}
+// 	res_acc_list, err := c.GetAccount(ctx, params)
+// 	if err != nil {
+// 		log.Fatalf("could not retrieve accounts: %v", err)
+// 	}
+// 	log.Print("\nuser list is:\n")
+// 	fmt.Printf("r.GetAccount():%v", res_acc_list)
 
-}
+// }
