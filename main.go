@@ -54,8 +54,9 @@ func startGRPCServerService() {
 	dbname := os.Getenv("DB_NAME")
 	host := os.Getenv("DB_HOST")
 	sslmode := os.Getenv("DB_SSLMODE")
+	pass_db := os.Getenv("POSTGRES_PASSWORD")
 
-	database_url := fmt.Sprintf("postgresql://%s:@%s:5432/%s?sslmode=%s", user, host, dbname, sslmode)
+	database_url := fmt.Sprintf("postgresql://%s:%s@%s:5432/%s?sslmode=%s", user, pass_db, host, dbname, sslmode)
 
 	conn, err := pgx.Connect(context.Background(), database_url)
 	if err != nil {
