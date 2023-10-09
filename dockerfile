@@ -10,4 +10,6 @@ RUN go build -o bin/gobank .
 
 EXPOSE 3000 50051
 
+RUN chmod +x ./bin/gobank
+
 ENTRYPOINT [ "./bin/gobank" ]
