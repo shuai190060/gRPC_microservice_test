@@ -1,7 +1,9 @@
 FROM golang:1.21.2-bullseye
 
-# RUN mkdir /app
-# WORKDIR /app
+RUN mkdir /app
+WORKDIR /app
+ENV GOPATH /app
+
 COPY . .
 
 # RUN go get
