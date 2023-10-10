@@ -11,7 +11,7 @@ RUN go get
 RUN go build -o bin/gobank .
 
 
-EXPOSE 3000 50051
+EXPOSE 3000 50051 9092
 
 RUN chmod +x ./bin/gobank
 # RUN #!/bin/ ./bin/gobank 
