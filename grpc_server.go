@@ -21,11 +21,13 @@ const (
 
 type AccountServer struct {
 	pb.UnimplementedAccountManagementServer
-	conn *pgx.Conn
+	conn    *pgx.Conn
+	metrics *grpcMetrics
 	// account_list *pb.AccountList
 }
 
 func (s *AccountServer) CreateAccount(ctx context.Context, in *pb.NewAccount) (*pb.Account, error) {
+
 	log.Printf("received:%v", in.GetFirstName())
 
 	createSQL := `
@@ -88,20 +90,24 @@ func TimestampProtoToTime(ts *timestamppb.Timestamp) time.Time {
 // 	return timestamppb.New(t)
 // }
 
-func NewAccountServer() *AccountServer {
-	return &AccountServer{}
+func NewAccountServer(metrics *grpcMetrics) *AccountServer {
+	return &AccountServer{
+		conn:    nil,
+		metrics: metrics,
+	}
 }
 
-func (server *AccountServer) Run() error {
+func (s *AccountServer) Run() error {
+
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		return err
 	}
 	//init new grpc server
-	s := grpc.NewServer()
-	pb.RegisterAccountManagementServer(s, server)
+	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(s.metrics.UnaryInterceptor))
+	pb.RegisterAccountManagementServer(grpcServer, s)
 	log.Printf("server listening at %v", lis.Addr())
-	return s.Serve(lis)
+	return grpcServer.Serve(lis)
 
 }
 

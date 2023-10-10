@@ -34,11 +34,12 @@ func main() {
 	//----------------------------------------------------------------------------------
 
 	// server service
-	startGRPCServerService()
 
-	//----------------------------------------------------------------------------------
-	// metrics
-	//----------------------------------------------------------------------------------
+	grpcMetrics := StartGRPCMetricsServer()
+
+	startGRPCServerService(grpcMetrics)
+
+	select {}
 
 }
 
@@ -49,7 +50,7 @@ func startRESTApiService(store *PostgresStore) {
 	server.Run()
 }
 
-func startGRPCServerService() {
+func startGRPCServerService(metrics *grpcMetrics) {
 
 	// Fetch environment variables
 	user := os.Getenv("DB_USER")
@@ -67,11 +68,12 @@ func startGRPCServerService() {
 	}
 	defer conn.Close(context.Background())
 
-	var account_server *AccountServer = NewAccountServer()
+	var account_server *AccountServer = NewAccountServer(metrics)
 	account_server.conn = conn
 	if err := account_server.Run(); err != nil {
 		log.Fatalf("failed to server:%v", err)
 	}
+
 }
 
 // func startGRPCClientService() {
