@@ -10,22 +10,28 @@ import (
 
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type APIServer struct {
 	listenAddr string
 	store      Storage
+	metrics    *metrics // add for prometheus metrics
 }
 
-func NewApiServer(listenAddr string, store Storage) *APIServer {
+func NewApiServer(listenAddr string, store Storage, metrics *metrics) *APIServer {
 	return &APIServer{
 		listenAddr: listenAddr,
 		store:      store,
+		metrics:    metrics,
 	}
 }
 
 func (s *APIServer) Run() {
 	router := mux.NewRouter()
+	router.Handle("/metrics", promhttp.Handler())
+	router.Use(s.metricsMiddleware)
+
 	router.HandleFunc("/account", makeHttpHandleFunc(s.handleAccount))
 
 	// take the id as variable for http request
@@ -63,13 +69,7 @@ func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) err
 
 // get account by ID
 func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request) error {
-	// idstring := mux.Vars(r)["id"]
-	// // fmt.Println(mux.Vars(r))
-	// id, err := strconv.Atoi(idstring)
-	// if err != nil {
-	// 	return fmt.Errorf("invalid id given %s", idstring)
 
-	// }
 	if r.Method == "GET" {
 		id, err := getID(r)
 		if err != nil {

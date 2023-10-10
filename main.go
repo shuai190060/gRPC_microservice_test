@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/jackc/pgx/v4"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func init() {
@@ -35,15 +36,16 @@ func main() {
 	// server service
 	startGRPCServerService()
 
-	// // // client service to write to postgresql
-	// time.Sleep(1 * time.Second)
-	// startGRPCClientService()
-	// select {}
+	//----------------------------------------------------------------------------------
+	// metrics
+	//----------------------------------------------------------------------------------
 
 }
 
 func startRESTApiService(store *PostgresStore) {
-	server := NewApiServer(":3000", store)
+	reg := prometheus.NewRegistry()
+	m := NewMetrics(reg)
+	server := NewApiServer(":3000", store, m)
 	server.Run()
 }
 
