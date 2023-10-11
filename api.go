@@ -29,7 +29,7 @@ func NewApiServer(listenAddr string, store Storage, metrics *metrics) *APIServer
 
 func (s *APIServer) Run() {
 	router := mux.NewRouter()
-	router.Handle("/metrics", promhttp.Handler())
+	router.Handle("/metrics", promhttp.HandlerFor(s.metrics.reg, promhttp.HandlerOpts{}))
 	router.Use(s.metricsMiddleware)
 
 	router.HandleFunc("/account", makeHttpHandleFunc(s.handleAccount))

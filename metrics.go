@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -13,6 +14,7 @@ import (
 
 type metrics struct {
 	Rest_latency prometheus.HistogramVec
+	reg          *prometheus.Registry
 }
 
 func NewMetrics(reg prometheus.Registerer) *metrics {
@@ -23,6 +25,7 @@ func NewMetrics(reg prometheus.Registerer) *metrics {
 			Help:      "Duration of the rest api request",
 			Buckets:   []float64{0.1, 0.15, 0.2, 0.25, 0.3},
 		}, []string{"status", "method"}),
+		reg: reg.(*prometheus.Registry),
 	}
 	reg.MustRegister(m.Rest_latency)
 	return m
@@ -37,9 +40,11 @@ func (s *APIServer) metricsMiddleware(next http.Handler) http.Handler {
 			status:         http.StatusOK,
 		}
 		next.ServeHTTP(recorder, r)
+		log.Println("HTTP response status:", recorder.status)
 		duration := time.Since(start).Seconds()
 
 		s.metrics.Rest_latency.WithLabelValues(strconv.Itoa(recorder.status), r.Method).Observe(duration)
+		log.Println("Metric observed with duration:", duration)
 
 	})
 }
