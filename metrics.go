@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 type metrics struct {
@@ -84,6 +85,15 @@ func NewGRPCMetrics(reg prometheus.Registerer) *grpcMetrics {
 
 // UnaryInterceptor act as middleware for latency capture
 func (m *grpcMetrics) UnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	log.Println("UnaryInterceptor triggered!")
+
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		log.Println("no metadata")
+	} else {
+		log.Printf("metadata %v+\n", md)
+	}
+
 	start := time.Now()
 	resp, err := handler(ctx, req)
 	duration := time.Since(start)
@@ -93,6 +103,7 @@ func (m *grpcMetrics) UnaryInterceptor(ctx context.Context, req interface{}, inf
 		status = "error"
 	}
 	m.createAccount_latency.WithLabelValues(info.FullMethod, status).Observe(duration.Seconds())
+	log.Println("grpc observed duration:", duration.Seconds())
 	return resp, err
 }
 
@@ -102,7 +113,11 @@ func StartGRPCMetricsServer() *grpcMetrics {
 	metrics := NewGRPCMetrics(reg)
 
 	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+
+	log.Println("About to start gRPC metrics server...")
 	go http.ListenAndServe(":9092", nil)
+
+	log.Println("gRPC metrics on port :9092")
 	return metrics
 
 }

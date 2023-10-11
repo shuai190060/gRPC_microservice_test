@@ -23,6 +23,7 @@ type AccountServer struct {
 	pb.UnimplementedAccountManagementServer
 	conn    *pgx.Conn
 	metrics *grpcMetrics
+
 	// account_list *pb.AccountList
 }
 
@@ -105,6 +106,7 @@ func (s *AccountServer) Run() error {
 	}
 	//init new grpc server
 	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(s.metrics.UnaryInterceptor))
+
 	pb.RegisterAccountManagementServer(grpcServer, s)
 	log.Printf("server listening at %v", lis.Addr())
 	return grpcServer.Serve(lis)
